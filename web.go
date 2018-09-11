@@ -59,13 +59,13 @@ func getAPI(res http.ResponseWriter) {
 
 // Reponds with the recorded IDs
 func getIGC(res http.ResponseWriter) {
-	ids := make([]int, len(database) + 1)
+	ids := make([]int, 0, len(database))
 	for id := range database {
 		ids = append(ids, id)
 	}
 
 	res.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(res).Encode(ids[1:])
+	json.NewEncoder(res).Encode(ids)
 }
 
 // Reponds with the track data for the recorded ID, if any

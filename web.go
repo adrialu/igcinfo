@@ -39,7 +39,7 @@ type IGCData struct {
 	Glider      string    `json:"glider"`
 	GliderID    string    `json:"glider_id"`
 	TrackLength float64   `json:"track_length"`
-	H_date      time.Time `json:"h_date"`
+	H_date      time.Time `json:"H_date"`
 }
 
 var pattern = regexp.MustCompile("^/api(/igc(/([0-9]+)(/([a-zA-Z_]+))?)?)?$")

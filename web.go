@@ -59,7 +59,7 @@ func getAPI(res http.ResponseWriter) {
 
 // Reponds with the recorded IDs
 func getIGC(res http.ResponseWriter) {
-	var ids [len(database) + 1]int
+	ids := make([]int, len(database) + 1)
 	for id := range database {
 		ids = append(ids, id)
 	}

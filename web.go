@@ -126,8 +126,6 @@ func postIGC(res http.ResponseWriter, req *http.Request){
 	id := len(database) + 1
 	database[id] = data
 
-	fmt.Println(database)
-
 	res.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(res).Encode(IGCRes{
 		Id: id,

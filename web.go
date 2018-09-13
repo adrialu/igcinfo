@@ -17,12 +17,14 @@ const (
 	DESC    = "Service for IGC tracks."
 )
 
+// data model for api status
 type Status struct {
 	Uptime  string `json:"uptime"`
 	Info    string `json:"info"`
 	Version string `json:"version"`
 }
 
+// used to store the time the webservers started
 var startTime time.Time
 
 // Responds with the current status of the API
@@ -34,12 +36,12 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Reponds with the recorded IDs
+// Reponds with the stored track IDs
 func getTracks(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, dbListTracks())
 }
 
-// Reponds with the track data for the recorded ID, if any
+// Reponds with the track data for the given track ID, if any
 func getTrack(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if data, err := dbGetTrack(id); err != nil {
@@ -49,8 +51,8 @@ func getTrack(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Responds with the field of the given name for the ID, if both parameters exist
-func getTrackField(w http.ResponseWriter, r *http.Request){
+// Responds with the field of the given name for the track ID, if both exist
+func getTrackField(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if data, err := dbGetTrack(id); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -59,13 +61,14 @@ func getTrackField(w http.ResponseWriter, r *http.Request){
 		if value, err := data.GetField(field); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
+			// text/plain is the default content type, we can just write the value directly
 			w.Write([]byte(value))
 		}
 	}
 }
 
-// Records the track by URL and returns its stored ID, if valid
-func createTrack(w http.ResponseWriter, r *http.Request){
+// Stores the track from url and responds with the stored track ID, if data is valid
+func createTrack(w http.ResponseWriter, r *http.Request) {
 	var data map[string]string
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		http.Error(w, "Invalid body.", http.StatusBadRequest)
@@ -98,7 +101,7 @@ func main() {
 		port = "8080"
 	}
 
-	// webserver
+	// create webserver routes
 	router := chi.NewRouter()
 	router.Route("/api", func(r chi.Router) {
 		r.Get("/", getStatus)

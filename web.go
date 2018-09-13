@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"fmt"
 	"log"
 	"encoding/json"
 	"time"
@@ -97,7 +96,7 @@ func main() {
 	// get port from environment
 	port := os.Getenv("PORT")
 	if port == "" {
-		fmt.Println("No port specified, using 8080")
+		log.Println("No port specified, using 8080")
 		port = "8080"
 	}
 

@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 	"log"
-	"encoding/json"
 	"time"
+	"encoding/json"
 	"net/http"
 
 	"github.com/p3lim/iso8601" // I wrote and published this since I couldn't find anything like it
@@ -21,14 +21,6 @@ type Status struct {
 	Uptime  string `json:"uptime"`
 	Info    string `json:"info"`
 	Version string `json:"version"`
-}
-
-type IGCReq struct {
-	URL string `json:"url"`
-}
-
-type IGCRes struct {
-	Id int `json:"id"`
 }
 
 var startTime time.Time
@@ -74,14 +66,20 @@ func getTrackField(w http.ResponseWriter, r *http.Request){
 
 // Records the track by URL and returns its stored ID, if valid
 func createTrack(w http.ResponseWriter, r *http.Request){
-	var data IGCReq
+	var data map[string]string
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		http.Error(w, "Invalid body.", http.StatusBadRequest)
 	} else {
-		if id, err := dbCreateTrack(data.URL); err != nil {
-			http.Error(w, "Url did not contain track data.", http.StatusBadRequest)
+		if url, ok := data["url"]; !ok {
+			http.Error(w, "Invalid body.", http.StatusBadRequest)
 		} else {
-			render.JSON(w, r, IGCRes{Id: id})
+			if id, err := dbCreateTrack(url); err != nil {
+				http.Error(w, "Url did not contain track data.", http.StatusBadRequest)
+			} else {
+				response := make(map[string]int)
+				response["id"] = id
+				render.JSON(w, r, response)
+			}
 		}
 	}
 }

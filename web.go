@@ -12,7 +12,7 @@ import (
 	"reflect"
 
 	"github.com/p3lim/iso8601" // I wrote and published this since I couldn't find anything like it
-	"github.com/marni/goigc"
+	"github.com/marni/goigc"   // required for the assignment
 )
 
 const (

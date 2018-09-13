@@ -22,10 +22,6 @@ It's an RESTful API with 5 available calls:
 
 ## Notes
 
-No particular coding style, linting or documentation has been enforced in this application,
-and very few external packages has been used.
-
-Further development would include linting, tests and use of well-established packages, but none of
-these were a requirement/encouraged for the assignment.
+The use of already-established packages to simplify the assignment were not limited by the assignment text, so some are used.
 
 [Browse back to 1f7a7408c3872987b244c67bbcd162479eb8b0fe](https://github.com/adrialu/igcinfo/tree/1f7a7408c3872987b244c67bbcd162479eb8b0fe) to see the implementation done without http routing/rendering packages.

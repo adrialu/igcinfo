@@ -4,13 +4,13 @@ import (
 	"os"
 	"fmt"
 	"log"
-	"regexp"
 	"encoding/json"
 	"time"
 	"net/http"
 
 	"github.com/p3lim/iso8601" // I wrote and published this since I couldn't find anything like it
 	"github.com/go-chi/render"
+	"github.com/go-chi/chi"
 )
 
 const (
@@ -32,8 +32,6 @@ type IGCRes struct {
 	Id int `json:"id"`
 }
 
-var pattern = regexp.MustCompile("^/api(/igc(/([0-9]+)(/([a-zA-Z_]+))?)?)?$")
-
 var startTime time.Time
 
 // Responds with the current status of the API
@@ -51,7 +49,8 @@ func getTracks(w http.ResponseWriter, r *http.Request) {
 }
 
 // Reponds with the track data for the recorded ID, if any
-func getTrack(w http.ResponseWriter, r *http.Request, id string) {
+func getTrack(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 	if data, err := dbGetTrack(id); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	} else {
@@ -60,10 +59,12 @@ func getTrack(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 // Responds with the field of the given name for the ID, if both parameters exist
-func getTrackField(w http.ResponseWriter, id string, field string){
+func getTrackField(w http.ResponseWriter, r *http.Request){
+	id := chi.URLParam(r, "id")
 	if data, err := dbGetTrack(id); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	} else {
+		field := chi.URLParam(r, "field")
 		if value, err := data.GetField(field); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
@@ -86,39 +87,6 @@ func createTrack(w http.ResponseWriter, r *http.Request){
 	}
 }
 
-func handleFunc(w http.ResponseWriter, r *http.Request) {
-	match := pattern.FindStringSubmatch(r.URL.Path)
-	if match != nil {
-		if match[5] != "" {
-			if r.Method == http.MethodGet {
-				getTrackField(w, match[3], match[5])
-				return
-			}
-		} else if match[3] != "" {
-			if r.Method == http.MethodGet {
-				getTrack(w, r, match[3])
-				return
-			}
-		} else if match[0] == "/api/igc" {
-			if r.Method == http.MethodGet {
-				getTracks(w, r)
-				return
-			} else if r.Method == http.MethodPost {
-				createTrack(w, r)
-				return
-			}
-		} else if match[0] == "/api" {
-			if r.Method == http.MethodGet {
-				getStatus(w, r)
-				return
-			}
-		}
-	}
-
-	// default response
-	http.NotFound(w, r)
-}
-
 func main() {
 	// set init time
 	startTime = time.Now()
@@ -133,7 +101,20 @@ func main() {
 		port = "8080"
 	}
 
+	// webserver
+	router := chi.NewRouter()
+	router.Route("/api", func(r chi.Router) {
+		r.Get("/", getStatus)
+		r.Route("/igc", func(r chi.Router) {
+			r.Get("/", getTracks)
+			r.Post("/", createTrack)
+			r.Route("/{id:[0-9]+}", func(r chi.Router) {
+				r.Get("/", getTrack)
+				r.Get("/{field:[A-Za-z_]+}", getTrackField)
+			})
+		})
+	})
+
 	// start webserver
-	http.HandleFunc("/", handleFunc)
-	log.Fatal(http.ListenAndServe(":" + port, nil))
+	log.Fatal(http.ListenAndServe(":" + port, router))
 }

@@ -1,15 +1,15 @@
 package main
 
 import (
-	"os"
-	"log"
-	"time"
 	"encoding/json"
+	"log"
 	"net/http"
+	"os"
+	"time"
 
-	"github.com/p3lim/iso8601" // I wrote and published this since I couldn't find anything like it
-	"github.com/go-chi/render"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/render"
+	"github.com/p3lim/iso8601" // I wrote and published this since I couldn't find anything like it
 )
 
 const (
@@ -30,8 +30,8 @@ var startTime time.Time
 // Responds with the current status of the API
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, Status{
-		Uptime: iso8601.Format(time.Since(startTime)),
-		Info: DESC,
+		Uptime:  iso8601.Format(time.Since(startTime)),
+		Info:    DESC,
 		Version: VERSION,
 	})
 }
@@ -116,5 +116,5 @@ func main() {
 	})
 
 	// start webserver
-	log.Fatal(http.ListenAndServe(":" + port, router))
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }

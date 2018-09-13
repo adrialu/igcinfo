@@ -1,15 +1,14 @@
 package main
 
 import (
-	"fmt"
-	"time"
 	"errors"
-	"strconv"
+	"fmt"
 	"reflect"
+	"strconv"
+	"time"
 
 	"github.com/marni/goigc" // required for the assignment
 )
-
 
 // Track data model
 type Track struct {
@@ -34,8 +33,8 @@ func dbCreateTrack(url string) (int, error) {
 	} else {
 		// calculate the total distance of the track data
 		distance := 0.0
-		for i := 0; i < len(track.Points) - 1; i++ {
-			distance += track.Points[i].Distance(track.Points[i + 1])
+		for i := 0; i < len(track.Points)-1; i++ {
+			distance += track.Points[i].Distance(track.Points[i+1])
 		}
 
 		// get next available ID
@@ -43,11 +42,11 @@ func dbCreateTrack(url string) (int, error) {
 
 		// store in database using our data model
 		database[id] = Track{
-			Pilot: track.Pilot,
-			Glider: track.GliderType,
-			GliderID: track.GliderID,
+			Pilot:       track.Pilot,
+			Glider:      track.GliderType,
+			GliderID:    track.GliderID,
 			TrackLength: distance,
-			H_date: track.Date,
+			H_date:      track.Date,
 		}
 
 		return id, nil

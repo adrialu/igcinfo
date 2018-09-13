@@ -5,14 +5,11 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"strconv"
 	"encoding/json"
 	"time"
 	"net/http"
-	"reflect"
 
 	"github.com/p3lim/iso8601" // I wrote and published this since I couldn't find anything like it
-	"github.com/marni/goigc"   // required for the assignment
 )
 
 const (
@@ -34,18 +31,9 @@ type IGCRes struct {
 	Id int `json:"id"`
 }
 
-type IGCData struct {
-	Pilot       string    `json:"pilot"`
-	Glider      string    `json:"glider"`
-	GliderID    string    `json:"glider_id"`
-	TrackLength float64   `json:"track_length"`
-	H_date      time.Time `json:"H_date"`
-}
-
 var pattern = regexp.MustCompile("^/api(/igc(/([0-9]+)(/([a-zA-Z_]+))?)?)?$")
 
 var startTime time.Time
-var database map[int]IGCData
 
 // Responds with the current status of the API
 func getAPI(res http.ResponseWriter) {
@@ -59,77 +47,50 @@ func getAPI(res http.ResponseWriter) {
 
 // Reponds with the recorded IDs
 func getIGC(res http.ResponseWriter) {
-	ids := make([]int, 0, len(database))
-	for id := range database {
-		ids = append(ids, id)
-	}
-
 	res.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(res).Encode(ids)
+	json.NewEncoder(res).Encode(dbListTracks())
 }
 
 // Reponds with the track data for the recorded ID, if any
-func getID(res http.ResponseWriter, id_s string) {
-	id, _ := strconv.Atoi(id_s) // error is already handled by the regex pattern
-	if data, ok := database[id]; ok {
+func getID(res http.ResponseWriter, id string) {
+	if data, err := dbGetTrack(id); err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+	} else {
 		res.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(res).Encode(data)
-	} else {
-		http.Error(res, "ID doesn't exist", 404)
 	}
 }
 
 // Responds with the field of the given name for the ID, if both parameters exist
-func getField(res http.ResponseWriter, id_s string, field string){
-	id, _ := strconv.Atoi(id_s) // error is already handled by the regex pattern
-	if data, ok := database[id]; ok {
-		val := reflect.ValueOf(&data).Elem()
-
-		for i := 0; i < val.NumField(); i++ {
-			if val.Type().Field(i).Tag.Get("json") == field {
-				res.Header().Set("Content-Type", "text/plain")
-				fmt.Fprintln(res, val.Field(i))
-				return
-			}
-		}
-
-		http.Error(res, "Field doesn't exist", 404)
+func getField(res http.ResponseWriter, id string, field string){
+	if data, err := dbGetTrack(id); err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
 	} else {
-		http.Error(res, "ID doesn't exist", 404)
+		if value, err := data.GetField(field); err != nil {
+			http.Error(res, err.Error(), http.StatusBadRequest)
+		} else {
+			res.Header().Set("Content-Type", "text/plain")
+			fmt.Fprintln(res, value)
+			// w.Write([]byte(value))
+		}
 	}
 }
 
 // Records the track by URL and returns its stored ID, if valid
 func postIGC(res http.ResponseWriter, req *http.Request){
-	var reqData IGCReq
-	json.NewDecoder(req.Body).Decode(&reqData)
-
-	track, err := igc.ParseLocation(reqData.URL)
-	if err != nil {
-		http.Error(res, "Failed to load track data", 400)
-		return
+	var data IGCReq
+	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+		http.Error(res, "Invalid body.", http.StatusBadRequest)
+	} else {
+		if id, err := dbCreateTrack(data.URL); err != nil {
+			http.Error(res, "Url did not contain track data.", http.StatusBadRequest)
+		} else {
+			res.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(res).Encode(IGCRes{
+				Id: id,
+			})
+		}
 	}
-
-	distance := 0.0
-	for i := 0; i < len(track.Points) - 1; i++ {
-		distance += track.Points[i].Distance(track.Points[i + 1])
-	}
-
-	data := IGCData{
-		Pilot: track.Pilot,
-		Glider: track.GliderType,
-		GliderID: track.GliderID,
-		TrackLength: distance,
-		H_date: track.Date,
-	}
-
-	id := len(database) + 1
-	database[id] = data
-
-	res.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(res).Encode(IGCRes{
-		Id: id,
-	})
 }
 
 func handleFunc(res http.ResponseWriter, req *http.Request) {
@@ -170,7 +131,7 @@ func main() {
 	startTime = time.Now()
 
 	// init "database"
-	database = make(map[int]IGCData)
+	dbInit()
 
 	// get port from environment
 	port := os.Getenv("PORT")

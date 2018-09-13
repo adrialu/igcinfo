@@ -37,7 +37,7 @@ var pattern = regexp.MustCompile("^/api(/igc(/([0-9]+)(/([a-zA-Z_]+))?)?)?$")
 var startTime time.Time
 
 // Responds with the current status of the API
-func getAPI(w http.ResponseWriter, r *http.Request) {
+func getStatus(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, Status{
 		Uptime: iso8601.Format(time.Since(startTime)),
 		Info: DESC,
@@ -46,12 +46,12 @@ func getAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 // Reponds with the recorded IDs
-func getIGC(w http.ResponseWriter, r *http.Request) {
+func getTracks(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, dbListTracks())
 }
 
 // Reponds with the track data for the recorded ID, if any
-func getID(w http.ResponseWriter, r *http.Request, id string) {
+func getTrack(w http.ResponseWriter, r *http.Request, id string) {
 	if data, err := dbGetTrack(id); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	} else {
@@ -60,7 +60,7 @@ func getID(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 // Responds with the field of the given name for the ID, if both parameters exist
-func getField(w http.ResponseWriter, id string, field string){
+func getTrackField(w http.ResponseWriter, id string, field string){
 	if data, err := dbGetTrack(id); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	} else {
@@ -73,7 +73,7 @@ func getField(w http.ResponseWriter, id string, field string){
 }
 
 // Records the track by URL and returns its stored ID, if valid
-func postIGC(w http.ResponseWriter, r *http.Request){
+func createTrack(w http.ResponseWriter, r *http.Request){
 	var data IGCReq
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		http.Error(w, "Invalid body.", http.StatusBadRequest)
@@ -91,25 +91,25 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 	if match != nil {
 		if match[5] != "" {
 			if r.Method == http.MethodGet {
-				getField(w, match[3], match[5])
+				getTrackField(w, match[3], match[5])
 				return
 			}
 		} else if match[3] != "" {
 			if r.Method == http.MethodGet {
-				getID(w, r, match[3])
+				getTrack(w, r, match[3])
 				return
 			}
 		} else if match[0] == "/api/igc" {
 			if r.Method == http.MethodGet {
-				getIGC(w, r)
+				getTracks(w, r)
 				return
 			} else if r.Method == http.MethodPost {
-				postIGC(w, r)
+				createTrack(w, r)
 				return
 			}
 		} else if match[0] == "/api" {
 			if r.Method == http.MethodGet {
-				getAPI(w, r)
+				getStatus(w, r)
 				return
 			}
 		}

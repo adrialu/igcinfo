@@ -36,9 +36,9 @@ var pattern = regexp.MustCompile("^/api(/igc(/([0-9]+)(/([a-zA-Z_]+))?)?)?$")
 var startTime time.Time
 
 // Responds with the current status of the API
-func getAPI(res http.ResponseWriter) {
-	res.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(res).Encode(Api{
+func getAPI(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(Api{
 		Uptime: iso8601.Format(time.Since(startTime)),
 		Info: DESC,
 		Version: VERSION,
@@ -46,84 +46,84 @@ func getAPI(res http.ResponseWriter) {
 }
 
 // Reponds with the recorded IDs
-func getIGC(res http.ResponseWriter) {
-	res.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(res).Encode(dbListTracks())
+func getIGC(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(dbListTracks())
 }
 
 // Reponds with the track data for the recorded ID, if any
-func getID(res http.ResponseWriter, id string) {
+func getID(w http.ResponseWriter, id string) {
 	if data, err := dbGetTrack(id); err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 	} else {
-		res.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(res).Encode(data)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(data)
 	}
 }
 
 // Responds with the field of the given name for the ID, if both parameters exist
-func getField(res http.ResponseWriter, id string, field string){
+func getField(w http.ResponseWriter, id string, field string){
 	if data, err := dbGetTrack(id); err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 	} else {
 		if value, err := data.GetField(field); err != nil {
-			http.Error(res, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
-			res.Header().Set("Content-Type", "text/plain")
-			fmt.Fprintln(res, value)
+			w.Header().Set("Content-Type", "text/plain")
+			fmt.Fprintln(w, value)
 			// w.Write([]byte(value))
 		}
 	}
 }
 
 // Records the track by URL and returns its stored ID, if valid
-func postIGC(res http.ResponseWriter, req *http.Request){
+func postIGC(w http.ResponseWriter, r *http.Request){
 	var data IGCReq
-	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
-		http.Error(res, "Invalid body.", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		http.Error(w, "Invalid body.", http.StatusBadRequest)
 	} else {
 		if id, err := dbCreateTrack(data.URL); err != nil {
-			http.Error(res, "Url did not contain track data.", http.StatusBadRequest)
+			http.Error(w, "Url did not contain track data.", http.StatusBadRequest)
 		} else {
-			res.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(res).Encode(IGCRes{
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(IGCRes{
 				Id: id,
 			})
 		}
 	}
 }
 
-func handleFunc(res http.ResponseWriter, req *http.Request) {
-	match := pattern.FindStringSubmatch(req.URL.Path)
+func handleFunc(w http.ResponseWriter, r *http.Request) {
+	match := pattern.FindStringSubmatch(r.URL.Path)
 	if match != nil {
 		if match[5] != "" {
-			if req.Method == http.MethodGet {
-				getField(res, match[3], match[5])
+			if r.Method == http.MethodGet {
+				getField(w, match[3], match[5])
 				return
 			}
 		} else if match[3] != "" {
-			if req.Method == http.MethodGet {
-				getID(res, match[3])
+			if r.Method == http.MethodGet {
+				getID(w, match[3])
 				return
 			}
 		} else if match[0] == "/api/igc" {
-			if req.Method == http.MethodGet {
-				getIGC(res)
+			if r.Method == http.MethodGet {
+				getIGC(w)
 				return
-			} else if req.Method == http.MethodPost {
-				postIGC(res, req)
+			} else if r.Method == http.MethodPost {
+				postIGC(w, r)
 				return
 			}
 		} else if match[0] == "/api" {
-			if req.Method == http.MethodGet {
-				getAPI(res)
+			if r.Method == http.MethodGet {
+				getAPI(w)
 				return
 			}
 		}
 	}
 
 	// default response
-	http.NotFound(res, req)
+	http.NotFound(w, r)
 }
 
 func main() {

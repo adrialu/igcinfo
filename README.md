@@ -27,3 +27,5 @@ and very few external packages has been used.
 
 Further development would include linting, tests and use of well-established packages, but none of
 these were a requirement/encouraged for the assignment.
+
+[Browse back to 1f7a7408c3872987b244c67bbcd162479eb8b0fe](https://github.com/adrialu/igcinfo/tree/1f7a7408c3872987b244c67bbcd162479eb8b0fe) to see the implementation done without http routing/rendering packages.

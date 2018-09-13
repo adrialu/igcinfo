@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/p3lim/iso8601" // I wrote and published this since I couldn't find anything like it
+	"github.com/go-chi/render"
 )
 
 const (
@@ -17,7 +18,7 @@ const (
 	DESC    = "Service for IGC tracks."
 )
 
-type Api struct {
+type Status struct {
 	Uptime  string `json:"uptime"`
 	Info    string `json:"info"`
 	Version string `json:"version"`
@@ -36,9 +37,8 @@ var pattern = regexp.MustCompile("^/api(/igc(/([0-9]+)(/([a-zA-Z_]+))?)?)?$")
 var startTime time.Time
 
 // Responds with the current status of the API
-func getAPI(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(Api{
+func getAPI(w http.ResponseWriter, r *http.Request) {
+	render.JSON(w, r, Status{
 		Uptime: iso8601.Format(time.Since(startTime)),
 		Info: DESC,
 		Version: VERSION,
@@ -46,18 +46,16 @@ func getAPI(w http.ResponseWriter) {
 }
 
 // Reponds with the recorded IDs
-func getIGC(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(dbListTracks())
+func getIGC(w http.ResponseWriter, r *http.Request) {
+	render.JSON(w, r, dbListTracks())
 }
 
 // Reponds with the track data for the recorded ID, if any
-func getID(w http.ResponseWriter, id string) {
+func getID(w http.ResponseWriter, r *http.Request, id string) {
 	if data, err := dbGetTrack(id); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	} else {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(data)
+		render.JSON(w, r, data)
 	}
 }
 
@@ -69,9 +67,7 @@ func getField(w http.ResponseWriter, id string, field string){
 		if value, err := data.GetField(field); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
-			w.Header().Set("Content-Type", "text/plain")
-			fmt.Fprintln(w, value)
-			// w.Write([]byte(value))
+			w.Write([]byte(value))
 		}
 	}
 }
@@ -85,10 +81,7 @@ func postIGC(w http.ResponseWriter, r *http.Request){
 		if id, err := dbCreateTrack(data.URL); err != nil {
 			http.Error(w, "Url did not contain track data.", http.StatusBadRequest)
 		} else {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(IGCRes{
-				Id: id,
-			})
+			render.JSON(w, r, IGCRes{Id: id})
 		}
 	}
 }
@@ -103,12 +96,12 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 			}
 		} else if match[3] != "" {
 			if r.Method == http.MethodGet {
-				getID(w, match[3])
+				getID(w, r, match[3])
 				return
 			}
 		} else if match[0] == "/api/igc" {
 			if r.Method == http.MethodGet {
-				getIGC(w)
+				getIGC(w, r)
 				return
 			} else if r.Method == http.MethodPost {
 				postIGC(w, r)
@@ -116,7 +109,7 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 			}
 		} else if match[0] == "/api" {
 			if r.Method == http.MethodGet {
-				getAPI(w)
+				getAPI(w, r)
 				return
 			}
 		}
